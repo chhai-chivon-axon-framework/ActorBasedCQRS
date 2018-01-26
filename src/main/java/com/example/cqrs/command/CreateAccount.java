@@ -1,12 +1,25 @@
 package com.example.cqrs.command;
 
+import java.util.UUID;
+
 public class CreateAccount extends Command {	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 25890934444776989L;
+	
+	private UUID accountId;
 	private String accountNumber;
 	private String accountName;
 	
 	public CreateAccount(String accountNumber, String accountName) {
+		this.accountId = UUID.randomUUID();
 		this.accountNumber = accountNumber;
 		this.accountName = accountName;
+	}	
+	
+	public UUID getAccountId() {
+		return accountId;
 	}
 
 	public String getAccountNumber() {
@@ -19,7 +32,7 @@ public class CreateAccount extends Command {
 
 	@Override
 	public String toString() {
-		return "CreateAccount [accountNumber=" + accountNumber + ", accountName=" + accountName + "]";
+		return "CreateAccount [accountId=" + accountId + ", accountNumber=" + accountNumber + ", accountName=" + accountName + "]";
 	}	
 	
 }

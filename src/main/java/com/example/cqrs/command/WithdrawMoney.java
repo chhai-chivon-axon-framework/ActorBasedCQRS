@@ -4,6 +4,11 @@ import java.math.BigDecimal;
 
 public class WithdrawMoney extends Command {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 7163119516202871790L;
+	
 	private BigDecimal amount;
 	
 	public WithdrawMoney(BigDecimal amount) {

@@ -1,21 +1,29 @@
 package com.example.cqrs.readmodel;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.Id;
 
 @Entity
 public class AccountEntry {
 	
 	@Id
+	private UUID id;
 	private String accountNumber;
 	private String accountName;
-	private String createdDate;
+	
+	@Enumerated(EnumType.STRING)
 	private AccountStatus status;
+	
 	private BigDecimal balance;
 	
-	public AccountEntry(){ }
+	public AccountEntry(){ 
+		this.status = AccountStatus.OPENED;
+	}
 	
 	public String getAccountNumber() {
 		return accountNumber;
@@ -25,20 +33,20 @@ public class AccountEntry {
 		this.accountNumber = accountNumber;
 	}
 
+	public UUID getId() {
+		return id;
+	}
+
+	public void setId(UUID id) {
+		this.id = id;
+	}
+
 	public String getAccountName() {
 		return accountName;
 	}
 
 	public void setAccountName(String accountName) {
 		this.accountName = accountName;
-	}
-
-	public String getCreatedDate() {
-		return createdDate;
-	}
-
-	public void setCreatedDate(String createdDate) {
-		this.createdDate = createdDate;
 	}
 
 	public AccountStatus getStatus() {
@@ -59,11 +67,9 @@ public class AccountEntry {
 	
 	@Override
 	public String toString() {
-		return "AccountEntry [accountNumber=" + accountNumber + ", accountName=" + accountName + ", createdDate="
-				+ createdDate + ", status=" + status + ", balance=" + balance + "]";
+		return "AccountEntry [id=" + id + ", accountNumber=" + accountNumber + ", accountName="
+				+ accountName + ", status=" + status + ", balance=" + balance + "]";
 	}
-
-
 
 	public enum AccountStatus {
 		OPENED,
