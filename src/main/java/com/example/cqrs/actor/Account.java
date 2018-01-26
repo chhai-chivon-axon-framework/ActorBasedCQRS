@@ -40,6 +40,7 @@ public class Account extends AbstractPersistentActor {
 	private final EventStoreRepository eventRepository;
 	
 	private AccountMapper mapper = new AccountMapper();
+	Optional<EventStore> latestEvent = Optional.empty();
 	
 	public Account(String accountNumber, String accountName, AccountEntryRepository repository, EventStoreRepository eventRepository) {
 		this.balance = BigDecimal.ZERO;
@@ -105,7 +106,7 @@ public class Account extends AbstractPersistentActor {
 	}
 	
 	private void applyEvent(Object event) throws IOException {
-		EventStore store = new EventStore();
+		EventStore eventStore = new EventStore();
 		if (event instanceof AccountCreated) {
 			this.state.update((AccountCreated) event);
 			this.id = ((AccountCreated) event).getAccountId();
@@ -113,8 +114,8 @@ public class Account extends AbstractPersistentActor {
 			this.accountName = ((AccountCreated) event).getAccountName();
 			this.balance = BigDecimal.ZERO;
 			
-			store.setPayload(PayloadUtils.serialize((AccountCreated) event));
-			store.setPayloadType(AccountCreated.class.getCanonicalName());
+			eventStore.setPayload(PayloadUtils.serialize((AccountCreated) event));
+			eventStore.setPayloadType(AccountCreated.class.getCanonicalName());
 			
 			AccountEntry accountEntry = mapper.map(this);
 			accountEntry.setId(this.id);
@@ -124,8 +125,8 @@ public class Account extends AbstractPersistentActor {
 			this.state.update((MoneyDeposited) event);
 			this.balance = balance.add(((MoneyDeposited) event).getAmount());
 			
-			store.setPayload(PayloadUtils.serialize((MoneyDeposited) event));
-			store.setPayloadType(MoneyDeposited.class.getCanonicalName());
+			eventStore.setPayload(PayloadUtils.serialize((MoneyDeposited) event));
+			eventStore.setPayloadType(MoneyDeposited.class.getCanonicalName());
 			
 			AccountEntry entry = getAccountEntry();
 			entry.setBalance(balance);
@@ -135,15 +136,22 @@ public class Account extends AbstractPersistentActor {
 			this.state.update((MoneyWithdrawn) event);
 			this.balance = balance.subtract(((MoneyWithdrawn) event).getAmount());
 			
-			store.setPayload(PayloadUtils.serialize((MoneyWithdrawn) event));
-			store.setPayloadType(MoneyWithdrawn.class.getCanonicalName());
+			eventStore.setPayload(PayloadUtils.serialize((MoneyWithdrawn) event));
+			eventStore.setPayloadType(MoneyWithdrawn.class.getCanonicalName());
 			
 			AccountEntry entry = getAccountEntry();
 			entry.setBalance(balance);
 			repository.save(entry);
 		}
 		
-		eventRepository.save(store);
+		latestEvent = eventRepository.findTop1ByAggregateIdOrderBySequenceDesc(this.id);
+		if (latestEvent.isPresent()) {
+			eventStore.setSequence(latestEvent.get().getSequence() + 1);
+		} else {
+			eventStore.setSequence(Long.valueOf(0));
+		}
+		eventStore.setAggregateId(this.id);
+		eventRepository.save(eventStore);
 		getContext().getSystem().eventStream().publish(event);		
 	}
 	

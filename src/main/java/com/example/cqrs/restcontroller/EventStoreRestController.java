@@ -1,19 +1,17 @@
 package com.example.cqrs.restcontroller;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.cqrs.common.EventStoreMapper;
-import com.example.cqrs.common.PayloadUtils;
 import com.example.cqrs.event.store.EventStore;
 import com.example.cqrs.event.store.EventStoreEntry;
-import com.example.cqrs.event.store.EventStoreRepository;
+import com.example.cqrs.service.EventStoreService;
 
 @RestController
 @RequestMapping(EventStoreRestController.API + EventStoreRestController.EVENT_STORE)
@@ -23,34 +21,39 @@ public class EventStoreRestController {
 	public static final String EVENT_STORE = "/eventstores";
 	public static final String DECODE = "/decode";
 	public static final String OBJECTS = "/objects";
-	
-	EventStoreMapper mapper = new EventStoreMapper();
+	public static final String AGGREGATE_ID = "/{aggregateId}";
 	
 	@Autowired
-	private EventStoreRepository eventRepository;
+	private EventStoreService service;
 	
 	@GetMapping 
     public List<EventStore> getEventStores() {
-		return eventRepository.findAll();
+		return service.getAllEventStores();
+	}
+	
+	@GetMapping(AGGREGATE_ID) 
+    public List<EventStore> getEventsForAggregate(@PathVariable String aggregateId) {
+		return service.getEventsForAggregate(UUID.fromString(aggregateId));
+	}
+	
+	@GetMapping(AGGREGATE_ID + DECODE) 
+    public List<EventStoreEntry> getEventEntryForAggregate(@PathVariable String aggregateId) {
+		return service.getEventEntriesForAggregate(UUID.fromString(aggregateId));
 	}
 	
 	@GetMapping(OBJECTS)
 	public List<Object> getPayloadsOfEventStores() {
-		return eventRepository.findAll().stream()
-			.map(EventStore::getPayload)
-			.map(payload -> {
-				try {
-					return PayloadUtils.deserialize(payload);
-				} catch (ClassNotFoundException | IOException e) {
-					e.printStackTrace();
-				}
-				return payload;
-			}).collect(Collectors.toList());
+		return service.getPayloadsOfEventStores();
+	}
+	
+	@GetMapping(OBJECTS + AGGREGATE_ID)
+	public List<Object> getPayloadsOfEventStores(@PathVariable String aggregateId) {
+		return service.getPayloadsForAggregate(UUID.fromString(aggregateId));
 	}
 	
 	@GetMapping(DECODE)
 	public List<EventStoreEntry> getDecodedEventStores() {
-		return eventRepository.findAll().stream()
-			.map(e -> mapper.map(e)).collect(Collectors.toList());
+		return service.getDecodedEventStores();
 	}
+
 }

@@ -7,6 +7,8 @@ public class EventStoreEntry {
 	private UUID id;
 	private Object payload;
 	private String payloadType;
+	private UUID aggregateId;
+	private Long sequence;	
 	
 	public EventStoreEntry() { }
 
@@ -32,6 +34,22 @@ public class EventStoreEntry {
 
 	public void setPayloadType(String payloadType) {
 		this.payloadType = payloadType;
-	}	
+	}
+
+	public UUID getAggregateId() {
+		return aggregateId;
+	}
+
+	public void setAggregateId(UUID aggregateId) {
+		this.aggregateId = aggregateId;
+	}
+
+	public Long getSequence() {
+		return sequence;
+	}
+
+	public void setSequence(Long sequence) {
+		this.sequence = sequence;
+	}		
 	
 }

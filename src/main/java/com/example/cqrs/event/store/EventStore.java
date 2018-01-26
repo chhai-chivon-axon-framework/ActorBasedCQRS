@@ -19,6 +19,10 @@ public class EventStore {
 	
 	private String payloadType;
 	
+	private UUID aggregateId;
+	
+	private Long sequence;
+	
 	public EventStore() { 
 		this.id = UUID.randomUUID();
 	}
@@ -45,6 +49,22 @@ public class EventStore {
 
 	public void setPayloadType(String payloadType) {
 		this.payloadType = payloadType;
+	}
+
+	public UUID getAggregateId() {
+		return aggregateId;
+	}
+
+	public void setAggregateId(UUID aggregateId) {
+		this.aggregateId = aggregateId;
+	}
+
+	public Long getSequence() {
+		return sequence;
+	}
+
+	public void setSequence(Long sequence) {
+		this.sequence = sequence;
 	}
 	
 }
