@@ -14,8 +14,8 @@ import com.example.cqrs.event.store.EventStoreEntry;
 import com.example.cqrs.service.EventStoreService;
 
 @RestController
-@RequestMapping(EventStoreRestController.API + EventStoreRestController.EVENT_STORE)
-public class EventStoreRestController {
+@RequestMapping(EventStoreAPI.API + EventStoreAPI.EVENT_STORE)
+public class EventStoreAPI {
 	
 	public static final String API = "/api";
 	public static final String EVENT_STORE = "/eventstores";
