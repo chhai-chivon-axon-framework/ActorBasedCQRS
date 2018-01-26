@@ -19,6 +19,7 @@ import com.example.cqrs.command.CreateAccount;
 import com.example.cqrs.command.DepositMoney;
 import com.example.cqrs.command.TakeSnapshot;
 import com.example.cqrs.command.WithdrawMoney;
+import com.example.cqrs.event.store.EventStoreRepository;
 import com.example.cqrs.readmodel.AccountEntry;
 import com.example.cqrs.readmodel.AccountEntryRepository;
 
@@ -44,6 +45,9 @@ public class BankAccountRestController {
 	@Autowired
 	private AccountEntryRepository repository;
 	
+	@Autowired
+	private EventStoreRepository eventRepository;
+	
 	@GetMapping(ACCOUNT_NUMBER) 
     public AccountEntry getAccountEntryByAccountNumber(@PathVariable String accountNumber) {
 		return repository.findByAccountNumber(accountNumber).orElse(null);
@@ -54,7 +58,7 @@ public class BankAccountRestController {
 		String accountName = request.get("account_name");
 		String accountNumber = request.get("account_number");				
 		persistentActor = system
-				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository)));
+				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository, eventRepository)));
 		persistentActor.tell("print", ActorRef.noSender());
 		persistentActor.tell(new CreateAccount(accountNumber, accountName), ActorRef.noSender());
 		persistentActor.tell(new TakeSnapshot(), ActorRef.noSender());
@@ -67,7 +71,7 @@ public class BankAccountRestController {
 		String accountNumber = request.get("account_number");				
 		
 		persistentActor = system
-				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository)));
+				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository, eventRepository)));
 		persistentActor.tell("print", ActorRef.noSender());
 		persistentActor.tell(new DepositMoney(new BigDecimal(amount)), ActorRef.noSender());
 		persistentActor.tell(new TakeSnapshot(), ActorRef.noSender());	
@@ -81,7 +85,7 @@ public class BankAccountRestController {
 		String amount = request.get("amount");
 		
 		persistentActor = system
-				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository)));
+				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository, eventRepository)));
 		persistentActor.tell("print", ActorRef.noSender());
 		persistentActor.tell(new WithdrawMoney(new BigDecimal(amount)), ActorRef.noSender());
 		persistentActor.tell(new TakeSnapshot(), ActorRef.noSender());

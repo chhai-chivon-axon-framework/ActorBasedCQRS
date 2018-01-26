@@ -1,5 +1,6 @@
 package com.example.cqrs.actor;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
@@ -13,9 +14,12 @@ import com.example.cqrs.command.TakeSnapshot;
 import com.example.cqrs.command.WithdrawMoney;
 import com.example.cqrs.common.AccountMapper;
 import com.example.cqrs.common.AccountState;
+import com.example.cqrs.common.PayloadUtils;
 import com.example.cqrs.event.AccountCreated;
 import com.example.cqrs.event.MoneyDeposited;
 import com.example.cqrs.event.MoneyWithdrawn;
+import com.example.cqrs.event.store.EventStore;
+import com.example.cqrs.event.store.EventStoreRepository;
 import com.example.cqrs.readmodel.AccountEntry;
 import com.example.cqrs.readmodel.AccountEntryRepository;
 
@@ -32,11 +36,12 @@ public class Account extends AbstractPersistentActor {
 	private BigDecimal balance = BigDecimal.ZERO;
 	private AccountState state = new AccountState();
 	
-	private AccountEntryRepository repository;
+	private final AccountEntryRepository repository;
+	private final EventStoreRepository eventRepository;
 	
 	private AccountMapper mapper = new AccountMapper();
 	
-	public Account(String accountNumber, String accountName, AccountEntryRepository repository) {
+	public Account(String accountNumber, String accountName, AccountEntryRepository repository, EventStoreRepository eventRepository) {
 		this.balance = BigDecimal.ZERO;
 		repository.findByAccountNumberAndAccountName(accountNumber, accountName)
 			.ifPresent(entry -> {
@@ -45,6 +50,7 @@ public class Account extends AbstractPersistentActor {
 		this.accountNumber = accountNumber;
 		this.accountName = accountName;
 		this.repository = repository;
+		this.eventRepository = eventRepository;
 	}
 	
 	@Override
@@ -97,14 +103,18 @@ public class Account extends AbstractPersistentActor {
 			System.out.println("Replay Events Completed!...");
 		}).build();
 	}
-
-	private void applyEvent(Object event) {
+	
+	private void applyEvent(Object event) throws IOException {
+		EventStore store = new EventStore();
 		if (event instanceof AccountCreated) {
 			this.state.update((AccountCreated) event);
 			this.id = ((AccountCreated) event).getAccountId();
 			this.accountNumber = ((AccountCreated) event).getAccountNumber();
 			this.accountName = ((AccountCreated) event).getAccountName();
 			this.balance = BigDecimal.ZERO;
+			
+			store.setPayload(PayloadUtils.serialize((AccountCreated) event));
+			store.setPayloadType(AccountCreated.class.getCanonicalName());
 			
 			AccountEntry accountEntry = mapper.map(this);
 			accountEntry.setId(this.id);
@@ -113,6 +123,10 @@ public class Account extends AbstractPersistentActor {
 		if (event instanceof MoneyDeposited) {
 			this.state.update((MoneyDeposited) event);
 			this.balance = balance.add(((MoneyDeposited) event).getAmount());
+			
+			store.setPayload(PayloadUtils.serialize((MoneyDeposited) event));
+			store.setPayloadType(MoneyDeposited.class.getCanonicalName());
+			
 			AccountEntry entry = getAccountEntry();
 			entry.setBalance(balance);
 			repository.save(entry);
@@ -120,10 +134,16 @@ public class Account extends AbstractPersistentActor {
 		if (event instanceof MoneyWithdrawn) {
 			this.state.update((MoneyWithdrawn) event);
 			this.balance = balance.subtract(((MoneyWithdrawn) event).getAmount());
+			
+			store.setPayload(PayloadUtils.serialize((MoneyWithdrawn) event));
+			store.setPayloadType(MoneyWithdrawn.class.getCanonicalName());
+			
 			AccountEntry entry = getAccountEntry();
 			entry.setBalance(balance);
 			repository.save(entry);
 		}
+		
+		eventRepository.save(store);
 		getContext().getSystem().eventStream().publish(event);		
 	}
 	
