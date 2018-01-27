@@ -12,6 +12,10 @@ public class TakeSnapshot extends Command {
 	public TakeSnapshot(String accountNumber) {
 		this.accountNumber = accountNumber;
 	}
+	
+	public String getAccountNumber() {
+		return accountNumber;
+	}
 
 	@Override
 	public String toString() {

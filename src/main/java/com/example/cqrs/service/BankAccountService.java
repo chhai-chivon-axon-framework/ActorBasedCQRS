@@ -22,6 +22,8 @@ import akka.actor.Props;
 @Service
 public class BankAccountService {
 	
+	private static final String PRINT = "print";
+	
 	ActorSystem system = ActorSystem.create("BankAccountSystem");
 	ActorRef persistentActor;
 	
@@ -41,7 +43,7 @@ public class BankAccountService {
 	public void createNewBankAccount(String accountNumber, String accountName) {
 		persistentActor = system
 				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository, eventRepository, snapshotRepository)));
-		persistentActor.tell("print", ActorRef.noSender());
+		persistentActor.tell(PRINT, ActorRef.noSender());
 		persistentActor.tell(new CreateAccount(accountNumber, accountName), ActorRef.noSender());
 		persistentActor.tell(new TakeSnapshot(accountNumber), ActorRef.noSender());
 	}
@@ -49,19 +51,19 @@ public class BankAccountService {
 	public void depositAmount(String accountNumber, String accountName, BigDecimal amount) {
 		persistentActor = system
 				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository, eventRepository, snapshotRepository)));
-		persistentActor.tell("print", ActorRef.noSender());
+		persistentActor.tell(PRINT, ActorRef.noSender());
 		persistentActor.tell(new DepositMoney(amount, accountNumber), ActorRef.noSender());
 		persistentActor.tell(new TakeSnapshot(accountNumber), ActorRef.noSender());	
-		persistentActor.tell("print", ActorRef.noSender());	
+		persistentActor.tell(PRINT, ActorRef.noSender());	
 	}
 	
 	public void withDrawAmount(String accountNumber, String accountName, BigDecimal amount) {
 		persistentActor = system
 				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository, eventRepository, snapshotRepository)));
-		persistentActor.tell("print", ActorRef.noSender());
+		persistentActor.tell(PRINT, ActorRef.noSender());
 		persistentActor.tell(new WithdrawMoney(amount, accountNumber), ActorRef.noSender());
 		persistentActor.tell(new TakeSnapshot(accountNumber), ActorRef.noSender());
-		persistentActor.tell("print", ActorRef.noSender());
+		persistentActor.tell(PRINT, ActorRef.noSender());
 	}
 
 }

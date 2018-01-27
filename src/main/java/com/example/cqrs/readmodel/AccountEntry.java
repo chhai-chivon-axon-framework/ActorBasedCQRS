@@ -1,5 +1,6 @@
 package com.example.cqrs.readmodel;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.UUID;
 
@@ -9,7 +10,12 @@ import javax.persistence.Enumerated;
 import javax.persistence.Id;
 
 @Entity
-public class AccountEntry {
+public class AccountEntry implements Serializable {
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -6213436782577368594L;
 	
 	@Id
 	private UUID id;

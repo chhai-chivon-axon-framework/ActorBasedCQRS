@@ -1,4 +1,4 @@
-package com.example.cqrs.restcontroller;
+package com.example.cqrs.common;
 
 import java.math.BigDecimal;
 

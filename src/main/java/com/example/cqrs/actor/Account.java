@@ -81,10 +81,10 @@ public class Account extends AbstractPersistentActor {
 				populateAggreate(command.getAccountNumber());
 				persist(new MoneyWithdrawn(command.getAmount(), command.getAccountNumber()), this::applyEvent);
 			})
-			.match(TakeSnapshot.class, event -> {
+			.match(TakeSnapshot.class, command -> {
 				LOG.info("TakeSnapshot ");
 				saveSnapshot(state.copy());
-				applyEvent(event);
+				applyEvent(new SnapshotTaken(command.getAccountNumber()));
 			})
 			.matchEquals("print", command -> {
 				System.out.println(toString());
@@ -163,6 +163,16 @@ public class Account extends AbstractPersistentActor {
 			entry.setBalance(balance);
 			repository.save(entry);
 		}
+		
+		latestEvent = eventRepository.findTop1ByAggregateIdOrderBySequenceDesc(this.id);
+		if (latestEvent.isPresent()) {
+			eventStore.setSequence(latestEvent.get().getSequence() + 1);
+		} else {
+			eventStore.setSequence(Long.valueOf(0));
+		}
+		eventStore.setAggregateId(this.id);
+		eventRepository.save(eventStore);
+		
 		if (event instanceof SnapshotTaken) {
 			String accountNumber = ((SnapshotTaken) event).getAccountNumber();
 			AccountEntry snapShotObject = repository.findByAccountNumber(accountNumber).orElse(null);
@@ -182,15 +192,6 @@ public class Account extends AbstractPersistentActor {
 				snapshotRepository.save(snapshot);
 			}
 		}
-		
-		latestEvent = eventRepository.findTop1ByAggregateIdOrderBySequenceDesc(this.id);
-		if (latestEvent.isPresent()) {
-			eventStore.setSequence(latestEvent.get().getSequence() + 1);
-		} else {
-			eventStore.setSequence(Long.valueOf(0));
-		}
-		eventStore.setAggregateId(this.id);
-		eventRepository.save(eventStore);
 		getContext().getSystem().eventStream().publish(event);		
 	}
 	

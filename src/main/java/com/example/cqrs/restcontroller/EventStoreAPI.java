@@ -19,9 +19,10 @@ public class EventStoreAPI {
 	
 	public static final String API = "/api";
 	public static final String EVENT_STORE = "/eventstores";
-	public static final String DECODE = "/decode";
-	public static final String OBJECTS = "/objects";
-	public static final String AGGREGATE_ID = "/{aggregateId}";
+	
+	private static final String DECODE = "/decode";
+	private static final String OBJECTS = "/objects";
+	private static final String AGGREGATE_ID = "/{aggregateId}";
 	
 	@Autowired
 	private EventStoreService service;
