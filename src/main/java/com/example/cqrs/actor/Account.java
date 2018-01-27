@@ -18,8 +18,11 @@ import com.example.cqrs.common.PayloadUtils;
 import com.example.cqrs.event.AccountCreated;
 import com.example.cqrs.event.MoneyDeposited;
 import com.example.cqrs.event.MoneyWithdrawn;
+import com.example.cqrs.event.SnapshotTaken;
 import com.example.cqrs.event.store.EventStore;
 import com.example.cqrs.event.store.EventStoreRepository;
+import com.example.cqrs.event.store.SnapshotEventStore;
+import com.example.cqrs.event.store.SnapshotEventStoreRepository;
 import com.example.cqrs.readmodel.AccountEntry;
 import com.example.cqrs.readmodel.AccountEntryRepository;
 
@@ -38,11 +41,12 @@ public class Account extends AbstractPersistentActor {
 	
 	private final AccountEntryRepository repository;
 	private final EventStoreRepository eventRepository;
+	private final SnapshotEventStoreRepository snapshotRepository;
 	
 	private AccountMapper mapper = new AccountMapper();
 	Optional<EventStore> latestEvent = Optional.empty();
 	
-	public Account(String accountNumber, String accountName, AccountEntryRepository repository, EventStoreRepository eventRepository) {
+	public Account(String accountNumber, String accountName, AccountEntryRepository repository, EventStoreRepository eventRepository, SnapshotEventStoreRepository snapshotRepository) {
 		this.balance = BigDecimal.ZERO;
 		repository.findByAccountNumberAndAccountName(accountNumber, accountName)
 			.ifPresent(entry -> {
@@ -52,15 +56,7 @@ public class Account extends AbstractPersistentActor {
 		this.accountName = accountName;
 		this.repository = repository;
 		this.eventRepository = eventRepository;
-	}
-	
-	public Account(AccountEntryRepository repository, EventStoreRepository eventRepository) {
-		this.balance = BigDecimal.ZERO;
-		this.repository = repository;
-		this.eventRepository = eventRepository;
-		this.id = null;
-		state = new AccountState();
-		latestEvent = Optional.empty();
+		this.snapshotRepository = snapshotRepository;
 	}
 	
 	@Override
@@ -88,6 +84,7 @@ public class Account extends AbstractPersistentActor {
 			.match(TakeSnapshot.class, event -> {
 				LOG.info("TakeSnapshot ");
 				saveSnapshot(state.copy());
+				applyEvent(event);
 			})
 			.matchEquals("print", command -> {
 				System.out.println(toString());
@@ -165,6 +162,25 @@ public class Account extends AbstractPersistentActor {
 			AccountEntry entry = getAccountEntry();
 			entry.setBalance(balance);
 			repository.save(entry);
+		}
+		if (event instanceof SnapshotTaken) {
+			String accountNumber = ((SnapshotTaken) event).getAccountNumber();
+			AccountEntry snapShotObject = repository.findByAccountNumber(accountNumber).orElse(null);
+			Optional<EventStore> latestEventStore = eventRepository.findTop1ByAggregateIdOrderBySequenceDesc(snapShotObject.getId());
+			if (snapShotObject != null && latestEventStore.isPresent()) {
+				SnapshotEventStore snapshot = snapshotRepository.findByAggregateId(snapShotObject.getId()).orElse(null);
+				if (snapshot == null) {
+					snapshot = new SnapshotEventStore();
+					snapshot.setId(UUID.randomUUID());
+				}
+				
+				snapshot.setSequence(latestEventStore.get().getSequence());
+				snapshot.setAggregateId(snapShotObject.getId());
+				snapshot.setPayload(PayloadUtils.serialize(snapShotObject));
+				snapshot.setPayloadType(AccountEntry.class.getCanonicalName());
+				
+				snapshotRepository.save(snapshot);
+			}
 		}
 		
 		latestEvent = eventRepository.findTop1ByAggregateIdOrderBySequenceDesc(this.id);
