@@ -54,6 +54,15 @@ public class Account extends AbstractPersistentActor {
 		this.eventRepository = eventRepository;
 	}
 	
+	public Account(AccountEntryRepository repository, EventStoreRepository eventRepository) {
+		this.balance = BigDecimal.ZERO;
+		this.repository = repository;
+		this.eventRepository = eventRepository;
+		this.id = null;
+		state = new AccountState();
+		latestEvent = Optional.empty();
+	}
+	
 	@Override
 	public String persistenceId() {
 		return accountNumber;
@@ -67,12 +76,14 @@ public class Account extends AbstractPersistentActor {
 				persist(new AccountCreated(command.getAccountId(), command.getAccountNumber(), command.getAccountName()), this::applyEvent);
 			})
 			.match(DepositMoney.class, command -> {
-				LOG.info("Deposit " + command.getAmount());
-				persist(new MoneyDeposited(command.getAmount()), this::applyEvent);
+				LOG.info("Deposit " + command.getAmount() + " to account " + command.getAccountNumber());
+				populateAggreate(command.getAccountNumber());
+				persist(new MoneyDeposited(command.getAmount(), command.getAccountNumber()), this::applyEvent);
 			})
 			.match(WithdrawMoney.class, command -> {
-				LOG.info("WithDraw " + command.getAmount());
-				persist(new MoneyWithdrawn(command.getAmount()), this::applyEvent);
+				LOG.info("WithDraw " + command.getAmount() + " from account " + command.getAccountNumber());
+				populateAggreate(command.getAccountNumber());
+				persist(new MoneyWithdrawn(command.getAmount(), command.getAccountNumber()), this::applyEvent);
 			})
 			.match(TakeSnapshot.class, event -> {
 				LOG.info("TakeSnapshot ");
@@ -81,6 +92,16 @@ public class Account extends AbstractPersistentActor {
 			.matchEquals("print", command -> {
 				System.out.println(toString());
 			}).build();
+	}
+
+	private void populateAggreate(String accountNumber) {
+		repository.findByAccountNumber(accountNumber)
+			.ifPresent(entry -> {
+				this.id = entry.getId();
+				this.accountName = entry.getAccountName();
+				this.accountNumber = accountNumber;
+				this.balance = entry.getBalance();
+			});
 	}
 
 	@Override
@@ -123,6 +144,7 @@ public class Account extends AbstractPersistentActor {
 		}
 		if (event instanceof MoneyDeposited) {
 			this.state.update((MoneyDeposited) event);
+			this.accountNumber = ((MoneyDeposited) event).getAccountNumber();
 			this.balance = balance.add(((MoneyDeposited) event).getAmount());
 			
 			eventStore.setPayload(PayloadUtils.serialize((MoneyDeposited) event));
@@ -134,6 +156,7 @@ public class Account extends AbstractPersistentActor {
 		}
 		if (event instanceof MoneyWithdrawn) {
 			this.state.update((MoneyWithdrawn) event);
+			this.accountNumber = ((MoneyWithdrawn) event).getAccountNumber();
 			this.balance = balance.subtract(((MoneyWithdrawn) event).getAmount());
 			
 			eventStore.setPayload(PayloadUtils.serialize((MoneyWithdrawn) event));

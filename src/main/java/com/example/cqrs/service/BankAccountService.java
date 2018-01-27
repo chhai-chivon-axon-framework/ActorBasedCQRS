@@ -46,7 +46,7 @@ public class BankAccountService {
 		persistentActor = system
 				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository, eventRepository)));
 		persistentActor.tell("print", ActorRef.noSender());
-		persistentActor.tell(new DepositMoney(amount), ActorRef.noSender());
+		persistentActor.tell(new DepositMoney(amount, accountNumber), ActorRef.noSender());
 		persistentActor.tell(new TakeSnapshot(), ActorRef.noSender());	
 		persistentActor.tell("print", ActorRef.noSender());	
 	}
@@ -55,7 +55,7 @@ public class BankAccountService {
 		persistentActor = system
 				.actorOf(Props.create(Account.class, () -> new Account(accountNumber, accountName, repository, eventRepository)));
 		persistentActor.tell("print", ActorRef.noSender());
-		persistentActor.tell(new WithdrawMoney(amount), ActorRef.noSender());
+		persistentActor.tell(new WithdrawMoney(amount, accountNumber), ActorRef.noSender());
 		persistentActor.tell(new TakeSnapshot(), ActorRef.noSender());
 		persistentActor.tell("print", ActorRef.noSender());
 	}

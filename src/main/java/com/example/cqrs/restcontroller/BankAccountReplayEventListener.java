@@ -1,7 +1,6 @@
 package com.example.cqrs.restcontroller;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -31,7 +30,7 @@ public class BankAccountReplayEventListener implements ReplayEventListener<Accou
 		}
 		if (event instanceof MoneyDeposited) {
 			MoneyDeposited depositedAccount = (MoneyDeposited) event;
-			AccountEntry entry = repository.findOne(UUID.fromString("81379c8f-edde-4536-96c8-cd634b37343b"));
+			AccountEntry entry = repository.findByAccountNumber(depositedAccount.getAccountNumber()).orElse(null);
 			if (entry != null) {
 				entry.setBalance(entry.getBalance().add(depositedAccount.getAmount()));
 				return repository.save(entry);
@@ -39,7 +38,7 @@ public class BankAccountReplayEventListener implements ReplayEventListener<Accou
 		}
 		if (event instanceof MoneyWithdrawn) {
 			MoneyWithdrawn withdrawnAccount = (MoneyWithdrawn) event;
-			AccountEntry entry = repository.findOne(UUID.fromString("81379c8f-edde-4536-96c8-cd634b37343b"));
+			AccountEntry entry = repository.findByAccountNumber(withdrawnAccount.getAccountNumber()).orElse(null);
 			if (entry != null) {
 				entry.setBalance(entry.getBalance().subtract(withdrawnAccount.getAmount()));
 				return repository.save(entry);
